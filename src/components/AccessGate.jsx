@@ -21,10 +21,10 @@ export default function AccessGate({ onAccess, onFail }) {
   };
 
   return (
-    <div className="auth-container">
+    <div className="auth-container" style={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
       <div className="glass-panel">
-        <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Restricted Access</h1>
-        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+        <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text-color)' }}>Restricted Access</h1>
+        <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
           Enter absolute access code to proceed.
         </p>
 

@@ -54,6 +54,9 @@ export default function Dashboard({ onClose }) {
     const [inputText, setInputText] = useState('');
     const [isRecording, setIsRecording] = useState(false);
 
+    // Mobile menu state
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
     const mediaRecorderRef = useRef(null);
@@ -190,90 +193,87 @@ export default function Dashboard({ onClose }) {
     };
 
     return (
-        <div className="app-container" style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
-            {/* Server Sidebar (Left) */}
-            <nav className="server-sidebar" style={{
-                width: '72px',
-                backgroundColor: '#1E1F22',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                paddingTop: '12px',
-                gap: '8px',
-                flexShrink: 0
-            }}>
-                <div className="server-icon" style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    background: '#5865F2',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    marginBottom: '8px'
-                }}>D</div>
+        <div className="app-container">
+            {/* Mobile Overlay Background */}
+            <div
+                className={`mobile-overlay ${mobileMenuOpen ? 'open' : ''}`}
+                onClick={() => setMobileMenuOpen(false)}
+            ></div>
 
-                <div style={{ width: '32px', height: '2px', background: '#35363C', marginBottom: '8px' }}></div>
+            {/* Sidebar Wrapper (Server + Channel List) */}
+            <div className={`sidebar-wrapper ${mobileMenuOpen ? 'open' : ''}`}>
 
-                <div className="server-icon" style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#313338' }}></div>
-            </nav>
+                {/* Server Sidebar (Leftmost) */}
+                <nav className="server-sidebar">
+                    <div className="server-icon active">D</div>
+                    <div className="server-divider"></div>
+                    <div className="server-icon"></div>
+                    <div className="server-icon"></div>
+                </nav>
 
-            {/* Channel Sidebar */}
-            <div className="channel-sidebar" style={{
-                width: '240px',
-                backgroundColor: '#2B2D31',
-                display: 'flex',
-                flexDirection: 'column',
-                flexShrink: 0
-            }}>
-                <header style={{ padding: '16px', borderBottom: '1px solid #1F2023', fontWeight: 'bold', boxShadow: '0 1px 0 rgba(4,4,5,0.2),0 1.5px 0 rgba(6,6,7,0.05),0 2px 0 rgba(4,4,5,0.05)' }}>
-                    Disclone Server
-                </header>
+                {/* Channel Sidebar (Next to servers) */}
+                <div className="channel-sidebar">
+                    <header className="chat-header" style={{ boxShadow: 'none' }}>
+                        <span style={{ fontWeight: 'bold' }}>Disclone Server</span>
+                    </header>
 
-                <div style={{ flex: 1, padding: '8px', overflowY: 'auto' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', padding: '6px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.08)', marginBottom: '4px', color: '#fff', cursor: 'pointer' }}>
-                        <span style={{ color: '#80848E', marginRight: '6px', fontSize: '20px' }}>#</span>
-                        <span style={{ fontWeight: 500 }}>general</span>
-                    </div>
-                </div>
-
-                {/* User Area */}
-                <div style={{ backgroundColor: '#232428', padding: '10px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F0B132' }}></div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '14px', fontWeight: '600', lineHeight: '18px' }}>Guest</span>
-                            <span style={{ fontSize: '12px', color: '#DBDEE1' }}>#9999</span>
+                    <div style={{ flex: 1, padding: '8px', overflowY: 'auto' }}>
+                        <div
+                            style={{ display: 'flex', alignItems: 'center', padding: '6px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.08)', marginBottom: '4px', color: '#fff', cursor: 'pointer' }}
+                            onClick={() => setMobileMenuOpen(false)}
+                        >
+                            <span style={{ color: '#80848E', marginRight: '6px', fontSize: '20px' }}>#</span>
+                            <span style={{ fontWeight: 500 }}>general</span>
                         </div>
                     </div>
 
-                    <button
-                        onClick={onClose}
-                        title="Fully Close Website"
-                        style={{
-                            background: '#ED4245',
-                            border: 'none',
-                            color: 'white',
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 'bold'
-                        }}
-                    >
-                        ✕
-                    </button>
+                    {/* User Area */}
+                    <div style={{ backgroundColor: '#232428', padding: '10px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F0B132' }}></div>
+                            <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span style={{ fontSize: '14px', fontWeight: '600', lineHeight: '18px' }}>Guest</span>
+                                <span style={{ fontSize: '12px', color: '#DBDEE1' }}>#9999</span>
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={onClose}
+                            title="Fully Close Website"
+                            style={{
+                                background: '#ED4245',
+                                border: 'none',
+                                color: 'white',
+                                width: '32px',
+                                height: '32px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                fontWeight: 'bold'
+                            }}
+                        >
+                            ✕
+                        </button>
+                    </div>
                 </div>
             </div>
 
             {/* Main Chat Area */}
-            <main className="chat-area" style={{ flex: 1, backgroundColor: '#313338', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                <header style={{ padding: '16px', borderBottom: '1px solid #26272D', display: 'flex', alignItems: 'center', boxShadow: '0 1px 0 rgba(4,4,5,0.2),0 1.5px 0 rgba(6,6,7,0.05),0 2px 0 rgba(4,4,5,0.05)' }}>
+            <main className="chat-area">
+                <header className="chat-header">
+                    {/* Hamburger Button (Mobile Only) */}
+                    <button
+                        className="menu-btn"
+                        onClick={() => setMobileMenuOpen(true)}
+                        aria-label="Open Menu"
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path fillRule="evenodd" clipRule="evenodd" d="M3 8V6H21V8H3ZM3 13H21V11H3V13ZM3 18H21V16H3V18Z" />
+                        </svg>
+                    </button>
+
                     <span style={{ fontSize: '24px', color: '#80848E', marginRight: '8px', fontWeight: 300 }}>#</span>
                     <span style={{ fontWeight: 'bold', color: '#F2F3F5' }}>general</span>
                 </header>
@@ -299,45 +299,43 @@ export default function Dashboard({ onClose }) {
                 </div>
 
                 {/* Input Area */}
-                <div style={{ padding: '0 16px 24px 16px' }}>
-                    <div className="chat-input-container">
-                        <input
-                            type="file"
-                            accept="video/*,image/*"
-                            style={{ display: 'none' }}
-                            ref={fileInputRef}
-                            onChange={handleFileUpload}
-                        />
-                        <button
-                            className="icon-btn"
-                            onClick={() => fileInputRef.current.click()}
-                            title="Upload File"
-                        >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-                            </svg>
-                        </button>
+                <div className="chat-input-container">
+                    <input
+                        type="file"
+                        accept="video/*,image/*"
+                        style={{ display: 'none' }}
+                        ref={fileInputRef}
+                        onChange={handleFileUpload}
+                    />
+                    <button
+                        className="icon-btn"
+                        onClick={() => fileInputRef.current.click()}
+                        title="Upload File"
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
+                        </svg>
+                    </button>
 
-                        <input
-                            type="text"
-                            className="chat-input"
-                            placeholder="Message #general"
-                            value={inputText}
-                            onChange={(e) => setInputText(e.target.value)}
-                            onKeyDown={handleKeyDown}
-                        />
+                    <input
+                        type="text"
+                        className="chat-input"
+                        placeholder="Message #general"
+                        value={inputText}
+                        onChange={(e) => setInputText(e.target.value)}
+                        onKeyDown={handleKeyDown}
+                    />
 
-                        <button
-                            className={`icon-btn ${isRecording ? 'recording' : ''}`}
-                            onClick={toggleRecording}
-                            title={isRecording ? "Stop Recording" : "Record Voice Message"}
-                        >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-                                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-                            </svg>
-                        </button>
-                    </div>
+                    <button
+                        className={`icon-btn ${isRecording ? 'recording' : ''}`}
+                        onClick={toggleRecording}
+                        title={isRecording ? "Stop Recording" : "Record Voice Message"}
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
+                            <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
+                        </svg>
+                    </button>
                 </div>
             </main>
         </div>
