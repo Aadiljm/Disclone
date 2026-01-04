@@ -276,6 +276,15 @@ export default function Dashboard({ onClose }) {
 
                     <span style={{ fontSize: '24px', color: '#80848E', marginRight: '8px', fontWeight: 300 }}>#</span>
                     <span style={{ fontWeight: 'bold', color: '#F2F3F5' }}>general</span>
+
+                    {/* Mobile Close Button (Top Right) */}
+                    <button
+                        className="mobile-close-btn"
+                        onClick={onClose}
+                        title="Close Session"
+                    >
+                        ✕
+                    </button>
                 </header>
 
                 <div className="message-list">

@@ -179,6 +179,22 @@ body {
     padding: 4px;
 }
 
+/* Mobile Close Button */
+.mobile-close-btn {
+    margin-left: auto;
+    background: #ED4245;
+    border: none;
+    color: white;
+    width: 32px;
+    height: 32px;
+    border-radius: 4px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+}
+
 /* --- Responsive Breakpoints --- */
 @media (min-width: 768px) {
 
@@ -198,6 +214,11 @@ body {
     .menu-btn {
         display: none;
         /* Hide hamburger on desktop */
+    }
+
+    .mobile-close-btn {
+        display: none;
+        /* Hide mobile close button on desktop */
     }
 }
 
