@@ -21,25 +21,31 @@ export default function AccessGate({ onAccess, onFail }) {
   };
 
   return (
-    <div className="glass-panel">
-      <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.5rem' }}>Restricted Access</h1>
-      <p style={{ color: 'rgba(255,255,255,0.6)', marginBottom: '2rem' }}>
-        Enter absolute access code to proceed.
-      </p>
-      
-      <form onSubmit={handleSubmit}>
-        <input
-          type="password"
-          className="input-field"
-          placeholder="Enter Passcode..." // Prompt didn't strictly say it's numeric, but passcode implies it.
-          value={code}
-          onChange={(e) => setCode(e.target.value)}
-          autoFocus
-        />
-        <button type="submit" className="btn-primary">
-          Verify Identity
-        </button>
-      </form>
+    <div className="auth-container">
+      <div className="glass-panel">
+        <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>Restricted Access</h1>
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '2rem' }}>
+          Enter absolute access code to proceed.
+        </p>
+
+        <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+          <div className="input-container" style={{ width: '100%', margin: 0 }}>
+            <input
+              type="password"
+              className="input-field"
+              placeholder="Enter Passcode..."
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              autoFocus
+              style={{ textAlign: 'center' }}
+            />
+          </div>
+
+          <button type="submit" className="btn-primary">
+            Verify Identity
+          </button>
+        </form>
+      </div>
     </div>
   );
 }
