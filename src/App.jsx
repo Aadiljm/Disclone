@@ -4,8 +4,13 @@ import Dashboard from './components/Dashboard';
 
 function App() {
   const [accessState, setAccessState] = useState(() => {
-    const hasAccess = localStorage.getItem('disclone_access');
-    return hasAccess === 'true' ? 'granted' : 'gate';
+    try {
+      const hasAccess = localStorage.getItem('disclone_access');
+      return hasAccess === 'true' ? 'granted' : 'gate';
+    } catch (e) {
+      console.warn("LocalStorage access denied", e);
+      return 'gate';
+    }
   });
 
   const attemptClose = useCallback(() => {

@@ -45,7 +45,7 @@ export default function Dashboard({ onClose }) {
 
         // Maintain functional intent: Persisting a text item
         const newItem = {
-            id: crypto.randomUUID(),
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
             type: 'text',
             content: inputText,
             timestamp: Date.now()
