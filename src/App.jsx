@@ -3,15 +3,7 @@ import AccessGate from './components/AccessGate';
 import Dashboard from './components/Dashboard';
 
 function App() {
-  const [accessState, setAccessState] = useState(() => {
-    try {
-      const hasAccess = localStorage.getItem('disclone_access');
-      return hasAccess === 'true' ? 'granted' : 'gate';
-    } catch (e) {
-      console.warn("LocalStorage access denied", e);
-      return 'gate';
-    }
-  });
+  const [accessState, setAccessState] = useState('checking'); // checking, gate, granted, terminated
 
   const attemptClose = useCallback(() => {
     // Attempt to close the tab
@@ -32,7 +24,15 @@ function App() {
   };
 
   useEffect(() => {
-    // Visibility / Lifecycle Handler
+    // 1. Initial Check
+    const hasAccess = localStorage.getItem('disclone_access');
+    if (hasAccess === 'true') {
+      setAccessState('granted');
+    } else {
+      setAccessState('gate');
+    }
+
+    // 2. Visibility / Lifecycle Handler
     const handleVisibility = () => {
       if (document.hidden) {
         // "Whenever the user switches apps or tabs, the website automatically closes"
