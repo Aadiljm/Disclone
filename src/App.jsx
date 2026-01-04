@@ -33,15 +33,15 @@ function App() {
     }
 
     // 2. Visibility / Lifecycle Handler
-    // const handleVisibility = () => {
-    //   if (document.hidden) {
-    //     // "Whenever the user switches apps or tabs, the website automatically closes"
-    //     attemptClose();
-    //   }
-    // };
+    const handleVisibility = () => {
+      if (document.hidden) {
+        // "Whenever the user switches apps or tabs, the website automatically closes"
+        attemptClose();
+      }
+    };
 
-    // document.addEventListener('visibilitychange', handleVisibility);
-    // return () => document.removeEventListener('visibilitychange', handleVisibility);
+    document.addEventListener('visibilitychange', handleVisibility);
+    return () => document.removeEventListener('visibilitychange', handleVisibility);
   }, [attemptClose]);
 
   const handleManualClose = () => {
