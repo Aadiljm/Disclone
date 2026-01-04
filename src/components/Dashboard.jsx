@@ -10,41 +10,57 @@ const MessageItem = ({ msg }) => {
             setMediaUrl(url);
             return () => URL.revokeObjectURL(url);
         }
-    }, [msg]);
+    }, [msg.type, msg.content]);
 
     const formatTime = (ts) => {
         return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
     };
 
     return (
-        <div className="message-item">
-            <div className="avatar"></div>
-            <div className="message-content">
-                <div className="message-header">
-                    <span className="username">User</span>
-                    <span className="timestamp">{formatTime(msg.timestamp)}</span>
+        <div className="message-group">
+            <div className="user-avatar" style={{ background: msg.type === 'system' ? '#5865F2' : '#747f8d', width: '40px', height: '40px' }}></div>
+            <div className="message-text-group">
+                <div className="message-meta">
+                    <span className="message-author">{msg.author || 'User'}</span>
+                    <span className="message-time">{formatTime(msg.timestamp)}</span>
                 </div>
 
-                {msg.type === 'text' && <div className="text-content">{msg.content}</div>}
+                {msg.type === 'text' && <div className="message-content">{msg.content}</div>}
+
+                {msg.type === 'image' && mediaUrl && (
+                    <div className="media-attachment">
+                        <img src={mediaUrl} alt="attachment" />
+                    </div>
+                )}
 
                 {msg.type === 'video' && mediaUrl && (
-                    <div className="media-content">
+                    <div className="media-attachment">
                         <video controls src={mediaUrl} />
                     </div>
                 )}
 
-                {msg.type === 'image' && mediaUrl && (
-                    <div className="media-content">
-                        <img src={mediaUrl} alt="uploaded content" style={{ maxWidth: '100%', borderRadius: '8px' }} />
-                    </div>
-                )}
-
                 {msg.type === 'voice' && mediaUrl && (
-                    <div className="media-content">
+                    <div className="media-attachment">
                         <audio controls src={mediaUrl} />
                     </div>
                 )}
+
+                {msg.type === 'system' && <div className="message-content" style={{ fontStyle: 'italic', color: '#949ba4' }}>{msg.content}</div>}
             </div>
+        </div>
+    );
+};
+
+const Category = ({ title, children, defaultOpen = true }) => {
+    const [isOpen, setIsOpen] = useState(defaultOpen);
+
+    return (
+        <div style={{ marginBottom: '16px' }}>
+            <div className="category-item" onClick={() => setIsOpen(!isOpen)}>
+                <span className={`transition-transform ${isOpen ? 'rotate-90' : ''}`} style={{ marginRight: '4px', display: 'inline-block' }}>▶</span>
+                {title}
+            </div>
+            {isOpen && <div style={{ marginTop: '4px' }}>{children}</div>}
         </div>
     );
 };
@@ -67,7 +83,6 @@ export default function Dashboard({ onClose }) {
     const loadMessages = useCallback(async () => {
         try {
             const msgs = await getMessages();
-            // Sort by timestamp
             msgs.sort((a, b) => a.timestamp - b.timestamp);
             setMessages(msgs);
         } catch (err) {
@@ -90,7 +105,8 @@ export default function Dashboard({ onClose }) {
             id: crypto.randomUUID(),
             type: 'text',
             content: inputText,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            author: 'Guest'
         };
 
         try {
@@ -113,19 +129,18 @@ export default function Dashboard({ onClose }) {
         const file = e.target.files[0];
         if (!file) return;
 
-        const isVideo = file.type.startsWith('video/');
-        const isImage = file.type.startsWith('image/');
-
-        if (!isVideo && !isImage) {
-            alert("Only video and image files are supported.");
+        const type = file.type.startsWith('video/') ? 'video' : file.type.startsWith('image/') ? 'image' : null;
+        if (!type) {
+            alert("Only image and video files are supported.");
             return;
         }
 
         const msg = {
             id: crypto.randomUUID(),
-            type: isVideo ? 'video' : 'image',
+            type: type,
             content: file,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            author: 'Guest'
         };
 
         try {
@@ -134,8 +149,6 @@ export default function Dashboard({ onClose }) {
         } catch (err) {
             console.error("Failed to upload file", err);
         }
-
-        // Reset input
         e.target.value = null;
     };
 
@@ -147,9 +160,7 @@ export default function Dashboard({ onClose }) {
             audioChunksRef.current = [];
 
             mediaRecorder.ondataavailable = (event) => {
-                if (event.data.size > 0) {
-                    audioChunksRef.current.push(event.data);
-                }
+                if (event.data.size > 0) audioChunksRef.current.push(event.data);
             };
 
             mediaRecorder.onstop = async () => {
@@ -158,19 +169,18 @@ export default function Dashboard({ onClose }) {
                     id: crypto.randomUUID(),
                     type: 'voice',
                     content: audioBlob,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    author: 'Guest'
                 };
                 await addMessage(msg);
                 loadMessages();
-
-                // Stop all tracks
                 stream.getTracks().forEach(track => track.stop());
             };
 
             mediaRecorder.start();
             setIsRecording(true);
         } catch (err) {
-            console.error("Scale to access microphone", err);
+            console.error("Microphone access failed", err);
             alert("Could not access microphone.");
         }
     };
@@ -183,131 +193,98 @@ export default function Dashboard({ onClose }) {
     };
 
     const toggleRecording = () => {
-        if (isRecording) {
-            stopRecording();
-        } else {
-            startRecording();
-        }
+        if (isRecording) stopRecording();
+        else startRecording();
     };
 
     return (
-        <div className={`app-container ${showMobileMenu ? 'mobile-menu-open' : ''}`} style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
-            {/* Mobile Overlay to close menu */}
-            {showMobileMenu && (
-                <div
-                    style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40 }}
-                    onClick={() => setShowMobileMenu(false)}
-                ></div>
-            )}
+        <div className={`app-container ${showMobileMenu ? 'mobile-menu-open' : ''}`}>
+            <div className="mobile-overlay" onClick={() => setShowMobileMenu(false)} />
 
-            {/* Server Sidebar (Left) */}
-            <nav className="server-sidebar" style={{
-                width: '72px',
-                backgroundColor: '#1E1F22',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                paddingTop: '12px',
-                gap: '8px',
-                flexShrink: 0
-            }}>
-                <div className="server-icon" style={{
-                    width: '48px',
-                    height: '48px',
-                    borderRadius: '50%',
-                    background: '#5865F2',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    color: 'white',
-                    fontWeight: 'bold',
-                    marginBottom: '8px'
-                }}>D</div>
-
-                <div style={{ width: '32px', height: '2px', background: '#35363C', marginBottom: '8px' }}></div>
-
-                <div className="server-icon" style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#313338' }}></div>
+            {/* Server Sidebar */}
+            <nav className="server-sidebar">
+                <div className="server-icon active">D</div>
+                <div className="separator"></div>
+                <div className="server-icon">H</div>
+                <div className="server-icon">G</div>
+                <div className="server-icon" style={{ marginTop: 'auto', background: '#23a559' }}>+</div>
             </nav>
 
             {/* Channel Sidebar */}
-            <div className="channel-sidebar" style={{
-                width: '240px',
-                backgroundColor: '#2B2D31',
-                display: 'flex',
-                flexDirection: 'column',
-                flexShrink: 0
-            }}>
-                <header style={{ padding: '16px', borderBottom: '1px solid #1F2023', fontWeight: 'bold', boxShadow: '0 1px 0 rgba(4,4,5,0.2),0 1.5px 0 rgba(6,6,7,0.05),0 2px 0 rgba(4,4,5,0.05)' }}>
+            <aside className="channel-sidebar">
+                <header className="sidebar-header">
                     Disclone Server
                 </header>
 
-                <div style={{ flex: 1, padding: '8px', overflowY: 'auto' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', padding: '6px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.08)', marginBottom: '4px', color: '#fff', cursor: 'pointer' }}>
-                        <span style={{ color: '#80848E', marginRight: '6px', fontSize: '20px' }}>#</span>
-                        <span style={{ fontWeight: 500 }}>general</span>
-                    </div>
+                <div className="sidebar-scroll">
+                    <Category title="Information">
+                        <div className="channel-item">
+                            <span className="channel-icon">📢</span> announcements
+                        </div>
+                        <div className="channel-item">
+                            <span className="channel-icon">📜</span> rules
+                        </div>
+                    </Category>
+
+                    <Category title="Text Channels">
+                        <div className="channel-item active">
+                            <span className="channel-icon">#</span> general
+                        </div>
+                        <div className="channel-item">
+                            <span className="channel-icon">#</span> development
+                        </div>
+                        <div className="channel-item">
+                            <span className="channel-icon">#</span> random
+                        </div>
+                    </Category>
+
+                    <Category title="Voice Channels">
+                        <div className="channel-item">
+                            <span className="channel-icon">🔊</span> General VC
+                        </div>
+                        <div className="channel-item">
+                            <span className="channel-icon">🔊</span> Gaming Lounge
+                        </div>
+                    </Category>
                 </div>
 
-                {/* User Area */}
-                <div style={{ backgroundColor: '#232428', padding: '10px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F0B132' }}></div>
-                        <div style={{ display: 'flex', flexDirection: 'column' }}>
-                            <span style={{ fontSize: '14px', fontWeight: '600', lineHeight: '18px' }}>Guest</span>
-                            <span style={{ fontSize: '12px', color: '#DBDEE1' }}>#9999</span>
-                        </div>
+                <div className="user-area">
+                    <div className="user-avatar"></div>
+                    <div className="user-info">
+                        <span className="user-name">Guest</span>
+                        <span className="user-tag">#9999</span>
                     </div>
-
-                    <button
-                        onClick={onClose}
-                        title="Fully Close Website"
-                        style={{
-                            background: '#ED4245',
-                            border: 'none',
-                            color: 'white',
-                            width: '32px',
-                            height: '32px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            fontWeight: 'bold'
-                        }}
-                    >
-                        ✕
+                    <button className="action-btn" onClick={onClose} title="Log out" style={{ color: '#ed4245' }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+                            <polyline points="16 17 21 12 16 7"></polyline>
+                            <line x1="21" y1="12" x2="9" y2="12"></line>
+                        </svg>
                     </button>
                 </div>
-            </div>
+            </aside>
 
             {/* Main Chat Area */}
-            <main className="chat-area" style={{ flex: 1, backgroundColor: '#313338', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-                <header style={{ padding: '16px', borderBottom: '1px solid #26272D', display: 'flex', alignItems: 'center', boxShadow: '0 1px 0 rgba(4,4,5,0.2),0 1.5px 0 rgba(6,6,7,0.05),0 2px 0 rgba(4,4,5,0.05)' }}>
-                    {/* Hamburger Menu for Mobile */}
-                    <button
-                        className="icon-btn mobile-only"
-                        style={{ marginRight: '8px', display: 'none' }} // Hidden by default, shown via CSS on mobile
-                        onClick={() => setShowMobileMenu(true)}
-                    >
+            <main className="chat-area">
+                <header className="chat-header">
+                    <button className="action-btn hamburger-btn" onClick={() => setShowMobileMenu(true)}>
                         <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
                             <path fillRule="evenodd" clipRule="evenodd" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path>
                         </svg>
                     </button>
-
-                    <span style={{ fontSize: '24px', color: '#80848E', marginRight: '8px', fontWeight: 300 }}>#</span>
-                    <span style={{ fontWeight: 'bold', color: '#F2F3F5' }}>general</span>
+                    <h3><span style={{ color: '#80848e', marginRight: '8px' }}>#</span> general</h3>
                 </header>
 
                 <div className="message-list">
-                    {/* Welcome Message */}
-                    <div className="message-item">
-                        <div className="avatar" style={{ background: '#5865F2' }}></div>
-                        <div className="message-content">
-                            <div className="message-header">
-                                <span className="username">System</span>
+                    {/* Welcome Group */}
+                    <div className="message-group">
+                        <div className="user-avatar" style={{ background: '#5865F2', width: '40px', height: '40px' }}></div>
+                        <div className="message-text-group">
+                            <div className="message-meta">
+                                <span className="message-author">System</span>
                             </div>
-                            <div className="text-content">
-                                Welcome to your secure Disclone instance. Messages are saved locally.
+                            <div className="message-content">
+                                Welcome to the general channel. All messages are stored permanently in your local database.
                             </div>
                         </div>
                     </div>
@@ -318,9 +295,16 @@ export default function Dashboard({ onClose }) {
                     <div ref={messagesEndRef} />
                 </div>
 
-                {/* Input Area */}
-                <div style={{ padding: '0 16px 24px 16px' }}>
-                    <div className="chat-input-container">
+                <div className="chat-input-wrapper">
+                    <div className="chat-input-box">
+                        <button className="action-btn" onClick={() => fileInputRef.current.click()} title="Upload file">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <line x1="12" y1="8" x2="12" y2="16"></line>
+                                <line x1="8" y1="12" x2="16" y2="12"></line>
+                            </svg>
+                        </button>
+
                         <input
                             type="file"
                             accept="video/*,image/*"
@@ -328,15 +312,6 @@ export default function Dashboard({ onClose }) {
                             ref={fileInputRef}
                             onChange={handleFileUpload}
                         />
-                        <button
-                            className="icon-btn"
-                            onClick={() => fileInputRef.current.click()}
-                            title="Upload File"
-                        >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                <path fillRule="evenodd" clipRule="evenodd" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm5 11h-4v4h-2v-4H7v-2h4V7h2v4h4v2z" />
-                            </svg>
-                        </button>
 
                         <input
                             type="text"
@@ -347,16 +322,27 @@ export default function Dashboard({ onClose }) {
                             onKeyDown={handleKeyDown}
                         />
 
-                        <button
-                            className={`icon-btn ${isRecording ? 'recording' : ''}`}
-                            onClick={toggleRecording}
-                            title={isRecording ? "Stop Recording" : "Record Voice Message"}
-                        >
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M12 14c1.66 0 3-1.34 3-3V5c0-1.66-1.34-3-3-3S9 3.34 9 5v6c0 1.66 1.34 3 3 3z" />
-                                <path d="M17 11c0 2.76-2.24 5-5 5s-5-2.24-5-5H5c0 3.53 2.61 6.43 6 6.92V21h2v-3.08c3.39-.49 6-3.39 6-6.92h-2z" />
-                            </svg>
-                        </button>
+                        <div className="input-actions">
+                            <button
+                                className={`action-btn ${isRecording ? 'recording' : ''}`}
+                                onClick={toggleRecording}
+                                title={isRecording ? "Stop recording" : "Record voice message"}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path>
+                                    <path d="M19 10v2a7 7 0 0 1-14 0v-2"></path>
+                                    <line x1="12" y1="19" x2="12" y2="23"></line>
+                                    <line x1="8" y1="23" x2="16" y2="23"></line>
+                                </svg>
+                            </button>
+
+                            <button className="action-btn" onClick={handleSendMessage} disabled={!inputText.trim()} style={{ color: inputText.trim() ? '#5865f2' : '#b5bac1' }}>
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                                </svg>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </main>
