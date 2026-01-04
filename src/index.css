@@ -226,7 +226,8 @@ body {
     border: 1px solid var(--glass-border);
     border-radius: 8px;
     color: white;
-    font-size: 1rem;
+    /* 16px prevents iOS/Android auto-zoom on focus */
+    font-size: 16px;
     outline: none;
     transition: all 0.3s ease;
 }
@@ -369,7 +370,8 @@ body {
     border: none;
     color: #F2F3F5;
     outline: none;
-    font-size: 1rem;
+    /* 16px prevents iOS/Android auto-zoom on focus */
+    font-size: 16px;
     min-width: 0;
     /* Fix flex shrink */
 }
