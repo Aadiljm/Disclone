@@ -53,6 +53,7 @@ export default function Dashboard({ onClose }) {
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState('');
     const [isRecording, setIsRecording] = useState(false);
+    const [showMobileMenu, setShowMobileMenu] = useState(false);
 
     const messagesEndRef = useRef(null);
     const fileInputRef = useRef(null);
@@ -190,7 +191,15 @@ export default function Dashboard({ onClose }) {
     };
 
     return (
-        <div className="app-container" style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
+        <div className={`app-container ${showMobileMenu ? 'mobile-menu-open' : ''}`} style={{ display: 'flex', width: '100%', height: '100%', overflow: 'hidden' }}>
+            {/* Mobile Overlay to close menu */}
+            {showMobileMenu && (
+                <div
+                    style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.5)', zIndex: 40 }}
+                    onClick={() => setShowMobileMenu(false)}
+                ></div>
+            )}
+
             {/* Server Sidebar (Left) */}
             <nav className="server-sidebar" style={{
                 width: '72px',
@@ -274,6 +283,17 @@ export default function Dashboard({ onClose }) {
             {/* Main Chat Area */}
             <main className="chat-area" style={{ flex: 1, backgroundColor: '#313338', display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                 <header style={{ padding: '16px', borderBottom: '1px solid #26272D', display: 'flex', alignItems: 'center', boxShadow: '0 1px 0 rgba(4,4,5,0.2),0 1.5px 0 rgba(6,6,7,0.05),0 2px 0 rgba(4,4,5,0.05)' }}>
+                    {/* Hamburger Menu for Mobile */}
+                    <button
+                        className="icon-btn mobile-only"
+                        style={{ marginRight: '8px', display: 'none' }} // Hidden by default, shown via CSS on mobile
+                        onClick={() => setShowMobileMenu(true)}
+                    >
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                            <path fillRule="evenodd" clipRule="evenodd" d="M3 18h18v-2H3v2zm0-5h18v-2H3v2zm0-7v2h18V6H3z"></path>
+                        </svg>
+                    </button>
+
                     <span style={{ fontSize: '24px', color: '#80848E', marginRight: '8px', fontWeight: 300 }}>#</span>
                     <span style={{ fontWeight: 'bold', color: '#F2F3F5' }}>general</span>
                 </header>

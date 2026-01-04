@@ -223,3 +223,72 @@ body {
     transform: scale(1);
   }
 }
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+  .app-container {
+    position: relative;
+  }
+
+  .mobile-only {
+    display: flex !important;
+  }
+
+  .server-sidebar,
+  .channel-sidebar {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 50;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .server-sidebar {
+    transform: translateX(0);
+    /* Server bar always visible? No, maybe hide both */
+    /* Let's make logical structure:
+       If menu is open -> Show Server + Channel
+       If menu is closed -> Show Only Chat
+    */
+    display: none !important;
+    /* Managed by React state or utility class */
+  }
+
+  .channel-sidebar {
+    display: none !important;
+  }
+
+  /* When we want to show them, we'll use a class .mobile-menu-open */
+  .mobile-menu-open .server-sidebar {
+    display: flex !important;
+    transform: translateX(0);
+    width: 72px;
+  }
+
+  .mobile-menu-open .channel-sidebar {
+    display: flex !important;
+    transform: translateX(72px);
+    /* Push it next to server bar */
+    width: calc(100% - 72px);
+    /* Take rest of width or fixed? */
+    max-width: 240px;
+    z-index: 49;
+    box-shadow: 4px 0 15px rgba(0, 0, 0, 0.5);
+  }
+
+  .chat-area {
+    width: 100%;
+    min-width: 100%;
+  }
+
+  .chat-input-container {
+    padding: 0.5rem;
+    margin: 0.5rem;
+  }
+
+  .message-content {
+    max-width: 90%;
+  }
+}
