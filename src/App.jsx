@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, lazy, Suspense } from 'react';
 import AccessGate from './components/AccessGate';
-import Dashboard from './components/Dashboard';
+// Lazy load Dashboard to allow AccessGate to load faster on slow networks
+const Dashboard = lazy(() => import('./components/Dashboard'));
 
 function App() {
   const [accessState, setAccessState] = useState('checking'); // checking, gate, granted, terminated
@@ -76,7 +77,13 @@ function App() {
   return (
     <>
       {accessState === 'granted' ? (
-        <Dashboard onClose={handleManualClose} />
+        <Suspense fallback={
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100dvh', color: '#949BA4' }}>
+            Loading App...
+          </div>
+        }>
+          <Dashboard onClose={handleManualClose} />
+        </Suspense>
       ) : (
         <AccessGate onAccess={grantAccess} onFail={attemptClose} />
       )}
