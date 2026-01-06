@@ -362,7 +362,21 @@ body {
     line-height: 1.4;
     white-space: pre-wrap;
     word-break: break-word;
-    /* Important for long messages */
+    background: rgba(255, 255, 255, 0.03);
+    padding: 8px 12px;
+    border-radius: 8px;
+    border-top-left-radius: 0;
+}
+
+.own-message .text-content {
+    background: rgba(88, 101, 242, 0.15);
+    border-top-left-radius: 8px;
+    border-top-right-radius: 0;
+    color: #fff;
+}
+
+.own-message .message-header {
+    justify-content: flex-end;
 }
 
 .media-content {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { addMessage, getMessages } from '../db';
+import { addMessage, getMessages, findUserByUsernameOrPasscode, sendFriendRequest, getPendingRequests, acceptFriendRequest, getUserById } from '../db';
 
-const MessageItem = ({ msg }) => {
+const MessageItem = ({ msg, isOwnMessage }) => {
     const [mediaUrl, setMediaUrl] = useState(null);
 
     useEffect(() => {
@@ -17,15 +17,15 @@ const MessageItem = ({ msg }) => {
     };
 
     return (
-        <div className="message-item">
-            <div className="avatar"></div>
-            <div className="message-content">
-                <div className="message-header">
-                    <span className="username">User</span>
+        <div className={`message-item ${isOwnMessage ? 'own-message' : ''}`} style={{ flexDirection: isOwnMessage ? 'row-reverse' : 'row' }}>
+            <div className="avatar" style={{ background: isOwnMessage ? '#5865F2' : '#7289da' }}></div>
+            <div className="message-content" style={{ alignItems: isOwnMessage ? 'flex-end' : 'flex-start' }}>
+                <div className="message-header" style={{ flexDirection: isOwnMessage ? 'row-reverse' : 'row' }}>
+                    <span className="username" style={{ color: isOwnMessage ? '#5865F2' : '#F2F3F5' }}>{msg.author || 'User'}</span>
                     <span className="timestamp">{formatTime(msg.timestamp)}</span>
                 </div>
 
-                {msg.type === 'text' && <div className="text-content">{msg.content}</div>}
+                {msg.type === 'text' && <div className="text-content" style={{ textAlign: isOwnMessage ? 'right' : 'left' }}>{msg.content}</div>}
 
                 {msg.type === 'video' && mediaUrl && (
                     <div className="media-content">
@@ -49,10 +49,16 @@ const MessageItem = ({ msg }) => {
     );
 };
 
-export default function Dashboard({ onClose }) {
+export default function Dashboard({ onClose, currentUser }) {
     const [messages, setMessages] = useState([]);
     const [inputText, setInputText] = useState('');
     const [isRecording, setIsRecording] = useState(false);
+
+    // Friend System State
+    const [showFriendModal, setShowFriendModal] = useState(false);
+    const [friendInput, setFriendInput] = useState('');
+    const [friendStatus, setFriendStatus] = useState('');
+    const [pendingRequests, setPendingRequests] = useState([]);
 
     // Mobile menu state
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -77,9 +83,31 @@ export default function Dashboard({ onClose }) {
         }
     }, []);
 
+    const loadFriendRequests = useCallback(async () => {
+        if (!currentUser) return;
+        try {
+            const reqs = await getPendingRequests(currentUser.id);
+            // Enrich with sender info
+            const enriched = await Promise.all(reqs.map(async (r) => {
+                const sender = await getUserById(r.fromUserId);
+                return { ...r, senderName: sender?.username || 'Unknown', senderPasscode: sender?.passcode };
+            }));
+            setPendingRequests(enriched);
+        } catch (err) {
+            console.error("Failed to load requests", err);
+        }
+    }, [currentUser]);
+
     useEffect(() => {
         loadMessages();
-    }, [loadMessages]);
+        loadFriendRequests();
+        // Poll for new stuff occasionally?
+        const interval = setInterval(() => {
+            loadMessages();
+            loadFriendRequests();
+        }, 5000);
+        return () => clearInterval(interval);
+    }, [loadMessages, loadFriendRequests]);
 
     useEffect(() => {
         scrollToBottom();
@@ -92,7 +120,9 @@ export default function Dashboard({ onClose }) {
             id: crypto.randomUUID(),
             type: 'text',
             content: inputText,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            author: currentUser?.username || 'Guest',
+            authorId: currentUser?.id
         };
 
         try {
@@ -108,6 +138,42 @@ export default function Dashboard({ onClose }) {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSendMessage();
+        }
+    };
+
+    const handleSendFriendRequest = async () => {
+        if (!friendInput.trim()) return;
+        setFriendStatus('Searching...');
+
+        try {
+            // "give friend request using username or using the personal passcode"
+            const user = await findUserByUsernameOrPasscode(friendInput.trim());
+
+            if (!user) {
+                setFriendStatus('❌ User not found.');
+                return;
+            }
+            if (user.id === currentUser.id) {
+                setFriendStatus("❌ That's you!");
+                return;
+            }
+
+            await sendFriendRequest(currentUser.id, user.id);
+            setFriendStatus(`✅ Request sent to ${user.username}!`);
+            setFriendInput('');
+        } catch (err) {
+            console.error(err);
+            setFriendStatus('❌ Failed to send request.');
+        }
+    };
+
+    const handleAcceptRequest = async (reqId) => {
+        try {
+            await acceptFriendRequest(reqId);
+            loadFriendRequests();
+            alert("Friend added!");
+        } catch (err) {
+            console.error(err);
         }
     };
 
@@ -127,7 +193,9 @@ export default function Dashboard({ onClose }) {
             id: crypto.randomUUID(),
             type: isVideo ? 'video' : 'image',
             content: file,
-            timestamp: Date.now()
+            timestamp: Date.now(),
+            author: currentUser?.username || 'Guest',
+            authorId: currentUser?.id
         };
 
         try {
@@ -182,7 +250,9 @@ export default function Dashboard({ onClose }) {
                     id: crypto.randomUUID(),
                     type: 'voice',
                     content: audioBlob,
-                    timestamp: Date.now()
+                    timestamp: Date.now(),
+                    author: currentUser?.username || 'Guest',
+                    authorId: currentUser?.id
                 };
                 await addMessage(msg);
                 loadMessages();
@@ -214,8 +284,63 @@ export default function Dashboard({ onClose }) {
         }
     };
 
+    if (!currentUser) return null;
+
     return (
         <div className="app-container">
+            {/* Friend Modal */}
+            {showFriendModal && (
+                <div className="mobile-overlay open" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'auto' }}>
+                    <div className="glass-panel" style={{ width: '90%', maxWidth: '400px', position: 'relative' }}>
+                        <button
+                            onClick={() => setShowFriendModal(false)}
+                            style={{ position: 'absolute', top: '10px', right: '10px', background: 'none', border: 'none', color: 'white', fontSize: '1.5rem', cursor: 'pointer' }}
+                        >✕</button>
+
+                        <h2 style={{ marginBottom: '1rem', color: 'white' }}>Manage Friends</h2>
+
+                        <div style={{ marginBottom: '2rem' }}>
+                            <p style={{ color: '#ccc', fontSize: '0.9rem', marginBottom: '0.5rem' }}>Add Friend by Username or Passcode</p>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <input
+                                    type="text"
+                                    className="input-field"
+                                    style={{ margin: 0 }}
+                                    placeholder="Username or Passcode..."
+                                    value={friendInput}
+                                    onChange={e => setFriendInput(e.target.value)}
+                                />
+                                <button className="btn-primary" style={{ width: 'auto' }} onClick={handleSendFriendRequest}>
+                                    Send
+                                </button>
+                            </div>
+                            {friendStatus && <p style={{ marginTop: '0.5rem', fontSize: '0.9rem', color: '#ddd' }}>{friendStatus}</p>}
+                        </div>
+
+                        <div style={{ borderTop: '1px solid rgba(255,255,255,0.1)', paddingTop: '1rem' }}>
+                            <h3 style={{ fontSize: '1rem', color: '#ccc', marginBottom: '0.5rem' }}>Pending Requests ({pendingRequests.length})</h3>
+                            {pendingRequests.length === 0 && <p style={{ color: '#666', fontSize: '0.8rem' }}>No pending requests.</p>}
+                            <ul style={{ listStyle: 'none', padding: 0 }}>
+                                {pendingRequests.map(req => (
+                                    <li key={req.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(0,0,0,0.2)', padding: '8px', marginBottom: '4px', borderRadius: '4px' }}>
+                                        <div style={{ color: 'white' }}>
+                                            <span style={{ fontWeight: 'bold' }}>{req.senderName}</span>
+                                            <span style={{ fontSize: '0.8rem', color: '#aaa' }}> #{req.senderPasscode}</span>
+                                        </div>
+                                        <button
+                                            onClick={() => handleAcceptRequest(req.id)}
+                                            style={{ background: '#2ecc71', border: 'none', color: 'white', padding: '4px 8px', borderRadius: '4px', cursor: 'pointer' }}
+                                        >
+                                            Accept
+                                        </button>
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* Mobile Overlay Background */}
             <div
                 className={`mobile-overlay ${mobileMenuOpen ? 'open' : ''}`}
@@ -240,6 +365,9 @@ export default function Dashboard({ onClose }) {
                     </header>
 
                     <div style={{ flex: 1, padding: '8px', overflowY: 'auto' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '8px' }}>
+                            <span style={{ textTransform: 'uppercase', fontSize: '12px', fontWeight: 'bold', color: '#949BA4', paddingLeft: '8px' }}>Channels</span>
+                        </div>
                         <div
                             style={{ display: 'flex', alignItems: 'center', padding: '6px 8px', borderRadius: '4px', background: 'rgba(255,255,255,0.08)', marginBottom: '4px', color: '#fff', cursor: 'pointer' }}
                             onClick={() => setMobileMenuOpen(false)}
@@ -247,15 +375,25 @@ export default function Dashboard({ onClose }) {
                             <span style={{ color: '#80848E', marginRight: '6px', fontSize: '20px' }}>#</span>
                             <span style={{ fontWeight: 500 }}>general</span>
                         </div>
+
+                        <div style={{ marginTop: '24px' }}>
+                            <button
+                                onClick={() => { setShowFriendModal(true); setMobileMenuOpen(false); }}
+                                style={{ width: '100%', background: '#248046', border: 'none', color: 'white', padding: '8px', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                            >
+                                <span style={{ fontSize: '1.2rem' }}>👋</span> Manage Friends
+                                {pendingRequests.length > 0 && <span style={{ background: '#ED4245', padding: '2px 6px', borderRadius: '10px', fontSize: '12px' }}>{pendingRequests.length}</span>}
+                            </button>
+                        </div>
                     </div>
 
                     {/* User Area */}
                     <div style={{ backgroundColor: '#232428', padding: '10px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F0B132' }}></div>
-                            <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span style={{ fontSize: '14px', fontWeight: '600', lineHeight: '18px' }}>Guest</span>
-                                <span style={{ fontSize: '12px', color: '#DBDEE1' }}>#9999</span>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+                            <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: '#F0B132', flexShrink: 0 }}></div>
+                            <div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                                <span style={{ fontSize: '14px', fontWeight: '600', lineHeight: '18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{currentUser.username}</span>
+                                <span style={{ fontSize: '12px', color: '#DBDEE1' }}>#{currentUser.passcode}</span>
                             </div>
                         </div>
 
@@ -273,7 +411,8 @@ export default function Dashboard({ onClose }) {
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                fontWeight: 'bold'
+                                fontWeight: 'bold',
+                                flexShrink: 0
                             }}
                         >
                             ✕
@@ -324,7 +463,7 @@ export default function Dashboard({ onClose }) {
                     </div>
 
                     {messages.map((msg) => (
-                        <MessageItem key={msg.id} msg={msg} />
+                        <MessageItem key={msg.id} msg={msg} isOwnMessage={msg.authorId === currentUser.id} />
                     ))}
                     <div ref={messagesEndRef} />
                 </div>
@@ -351,7 +490,7 @@ export default function Dashboard({ onClose }) {
                     <input
                         type="text"
                         className="chat-input"
-                        placeholder="Message #general"
+                        placeholder={`Message #general as ${currentUser.username}`}
                         value={inputText}
                         onChange={(e) => setInputText(e.target.value)}
                         onKeyDown={handleKeyDown}

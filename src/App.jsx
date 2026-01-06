@@ -5,6 +5,7 @@ const Dashboard = lazy(() => import('./components/Dashboard'));
 
 function App() {
   const [accessState, setAccessState] = useState('checking'); // checking, gate, granted, terminated
+  const [currentUser, setCurrentUser] = useState(null);
 
   const attemptClose = useCallback(() => {
     // Attempt to close the tab
@@ -17,18 +18,30 @@ function App() {
     // If browser blocks window.close(), we simulate a "Gone" state
     // so the sensitive info is hidden immediately.
     setAccessState('terminated');
+    setCurrentUser(null);
   }, []);
 
-  const grantAccess = () => {
-    localStorage.setItem('disclone_access', 'true');
+  const grantAccess = (user) => {
+    localStorage.setItem('disclone_user', JSON.stringify(user));
+    setCurrentUser(user);
     setAccessState('granted');
   };
 
   useEffect(() => {
     // 1. Initial Check
-    const hasAccess = localStorage.getItem('disclone_access');
-    if (hasAccess === 'true') {
-      setAccessState('granted');
+    const savedUser = localStorage.getItem('disclone_user');
+    if (savedUser) {
+      try {
+        const user = JSON.parse(savedUser);
+        if (user && user.username) {
+          setCurrentUser(user);
+          setAccessState('granted');
+        } else {
+          setAccessState('gate');
+        }
+      } catch (e) {
+        setAccessState('gate');
+      }
     } else {
       setAccessState('gate');
     }
@@ -46,18 +59,7 @@ function App() {
   }, [attemptClose]);
 
   const handleManualClose = () => {
-    // "The website can only be fully closed when the user clicks on the close button"
-    // AND "opens when ... (but this time it doesnt ask for an access code)"
-    // Wait, if "Fully Closed" implies logging out, we should remove the token.
-    // BUT the prompt says "Auto closes... opens again... no code".
-    // Does Manual close mean "Log out"?
-    // The prompt contrasts "Auto Close" (keeps auth) with "Full Close".
-    // It's ambiguous if "Full Close" clears auth.
-    // "create these first and ill tell you what changes to add next".
-    // I will assume Main Close Button = Logout (Safety).
-    // Auto Close = Session Pause (Convenience).
-
-    localStorage.removeItem('disclone_access');
+    localStorage.removeItem('disclone_user');
     attemptClose();
   };
 
@@ -82,7 +84,7 @@ function App() {
             Loading App...
           </div>
         }>
-          <Dashboard onClose={handleManualClose} />
+          <Dashboard onClose={handleManualClose} currentUser={currentUser} />
         </Suspense>
       ) : (
         <AccessGate onAccess={grantAccess} onFail={attemptClose} />
