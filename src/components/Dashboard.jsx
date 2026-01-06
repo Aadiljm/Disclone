@@ -148,10 +148,13 @@ export default function Dashboard({ onClose }) {
             // Detect supported MIME type for better compatibility (iOS prefers audio/mp4 or audio/aac)
             let mimeType = '';
             if (typeof MediaRecorder.isTypeSupported === 'function') {
-                if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
-                    mimeType = 'audio/webm;codecs=opus';
-                } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                // Check for iOS-friendly formats FIRST
+                if (MediaRecorder.isTypeSupported('audio/mp4')) {
                     mimeType = 'audio/mp4';
+                } else if (MediaRecorder.isTypeSupported('audio/aac')) {
+                    mimeType = 'audio/aac';
+                } else if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                    mimeType = 'audio/webm;codecs=opus';
                 } else if (MediaRecorder.isTypeSupported('audio/webm')) {
                     mimeType = 'audio/webm';
                 }
