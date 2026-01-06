@@ -144,7 +144,23 @@ export default function Dashboard({ onClose }) {
     const startRecording = async () => {
         try {
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-            const mediaRecorder = new MediaRecorder(stream);
+
+            // Detect supported MIME type for better compatibility (iOS prefers audio/mp4 or audio/aac)
+            let mimeType = '';
+            if (typeof MediaRecorder.isTypeSupported === 'function') {
+                if (MediaRecorder.isTypeSupported('audio/webm;codecs=opus')) {
+                    mimeType = 'audio/webm;codecs=opus';
+                } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+                    mimeType = 'audio/mp4';
+                } else if (MediaRecorder.isTypeSupported('audio/webm')) {
+                    mimeType = 'audio/webm';
+                }
+            }
+
+            // If no supported type found (or checking not supported), let browser choose default
+            const options = mimeType ? { mimeType } : undefined;
+            const mediaRecorder = new MediaRecorder(stream, options);
+
             mediaRecorderRef.current = mediaRecorder;
             audioChunksRef.current = [];
 
@@ -155,7 +171,10 @@ export default function Dashboard({ onClose }) {
             };
 
             mediaRecorder.onstop = async () => {
-                const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+                // Use the integrity mime type from the recorder itself if available
+                const finalMimeType = mediaRecorder.mimeType || mimeType || 'audio/webm';
+
+                const audioBlob = new Blob(audioChunksRef.current, { type: finalMimeType });
                 const msg = {
                     id: crypto.randomUUID(),
                     type: 'voice',
@@ -172,7 +191,7 @@ export default function Dashboard({ onClose }) {
             mediaRecorder.start();
             setIsRecording(true);
         } catch (err) {
-            console.error("Scale to access microphone", err);
+            console.error("Failed to access microphone", err);
             alert("Could not access microphone.");
         }
     };
