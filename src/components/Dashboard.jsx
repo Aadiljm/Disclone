@@ -127,6 +127,8 @@ export default function Dashboard({ onClose, currentUser }) {
             loadMessages();
         } catch (err) {
             console.error("Failed to send text", err);
+            alert("Could not send message. Check your internet or server connection.");
+
         }
     };
 
