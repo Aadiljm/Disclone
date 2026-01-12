@@ -1,16 +1,26 @@
-# React + Vite
+# Disclone
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A Discord-inspired clone optimized for mobile, featuring secure access codes and real-time messaging.
 
-Currently, two official plugins are available:
+## 🚀 Live Demo
+Access the web app here: **[https://Aadiljm.github.io/Disclone/](https://Aadiljm.github.io/Disclone/)**
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## React Compiler
+## ☁️ Automate Server Deployment (Permanent Hosting)
+To keep the chat working 24/7 without your laptop, deploy the server to the cloud.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+1. **Click the button below** to deploy to Render:
+   
+   [![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/Aadiljm/Disclone)
 
-## Expanding the ESLint configuration
+2. **Configure Render:**
+   - Sign in with GitHub.
+   - It will ask for `MONGO_URI`. You need a free database from [MongoDB Atlas](https://www.mongodb.com/cloud/atlas).
+   - Click **Apply**.
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+3. **Finalize Connection:**
+   - Copy the URL Render gives you (e.g., `https://disclone-server.onrender.com`).
+   - Open specific file `src/config.js` in this repo/folder.
+   - Update `API_BASE_URL` with that link.
+   - Commit & Push (the GitHub Action will auto-update the site).
