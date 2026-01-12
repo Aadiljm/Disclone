@@ -4,6 +4,8 @@ import { createUser, verifyUser } from '../db';
 export default function AccessGate({ onAccess }) {
   const [mode, setMode] = useState('login'); // 'login', 'signup', 'created'
   const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [passcode, setPasscode] = useState('');
   const [error, setError] = useState('');
   const [createdUser, setCreatedUser] = useState(null);
@@ -12,36 +14,34 @@ export default function AccessGate({ onAccess }) {
     e.preventDefault();
     setError('');
     try {
-      const user = await verifyUser(username, passcode);
+      const user = await verifyUser({ username, passcode, password });
       if (user) {
         onAccess(user);
-      } else {
-        setError('Invalid credentials. Please check your username and passcode.');
       }
     } catch (err) {
       console.error(err);
-      setError('Login failed. Please try again.');
+      setError(err.message || 'Login failed. Please check your credentials.');
     }
   };
 
   const handleSignup = async (e) => {
     e.preventDefault();
-    if (!username.trim()) {
-      setError("Username is required");
+    if (!username.trim() || !email.trim() || !password.trim()) {
+      setError("All fields are required");
       return;
     }
+    setError('');
     try {
-      const user = await createUser(username);
+      const user = await createUser({ username, email, password });
       setCreatedUser(user);
       setMode('created');
     } catch (err) {
       console.error(err);
-      setError('Signup failed.');
+      setError(err.message || 'Signup failed.');
     }
   };
 
   const handleProceedAfterSignup = () => {
-    // Auto login
     onAccess(createdUser);
   };
 
@@ -52,9 +52,6 @@ export default function AccessGate({ onAccess }) {
         {mode === 'login' && (
           <>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text-color)' }}>Welcome Back</h1>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
-              Login to access your secure channel.
-            </p>
             <form onSubmit={handleLogin}>
               <input
                 type="text"
@@ -62,6 +59,14 @@ export default function AccessGate({ onAccess }) {
                 placeholder="Username"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                className="input-field"
+                placeholder="Password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
                 required
               />
               <input
@@ -84,20 +89,33 @@ export default function AccessGate({ onAccess }) {
         {mode === 'signup' && (
           <>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.5rem', color: 'var(--text-color)' }}>Create Account</h1>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '2rem' }}>
-              Enter a username to generate your personal key.
-            </p>
             <form onSubmit={handleSignup}>
               <input
                 type="text"
                 className="input-field"
-                placeholder="Choose a Username"
+                placeholder="Username"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
                 required
               />
+              <input
+                type="email"
+                className="input-field"
+                placeholder="Email Address"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                required
+              />
+              <input
+                type="password"
+                className="input-field"
+                placeholder="Choose Password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                required
+              />
               {error && <p style={{ color: 'var(--error-color)', marginBottom: '1rem' }}>{error}</p>}
-              <button type="submit" className="btn-primary">Generate Passcode</button>
+              <button type="submit" className="btn-primary">Sign Up</button>
               <p style={{ marginTop: '1rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
                 Already have an account? <span onClick={() => { setMode('login'); setError(''); }} style={{ color: 'var(--accent-color)', cursor: 'pointer', fontWeight: 'bold' }}>Login</span>
               </p>
@@ -108,31 +126,24 @@ export default function AccessGate({ onAccess }) {
         {mode === 'created' && createdUser && (
           <div style={{ textAlign: 'center' }}>
             <h1 style={{ fontSize: '1.8rem', fontWeight: 'bold', marginBottom: '0.5rem', color: '#2ecc71' }}>Account Created!</h1>
-            <p style={{ color: 'var(--text-muted)', marginBottom: '1.5rem' }}>
-              Please save your details. You will need the passcode to login.
-            </p>
-
             <div style={{ background: 'rgba(0,0,0,0.3)', padding: '1.5rem', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid var(--accent-color)' }}>
               <div style={{ marginBottom: '10px' }}>
                 <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Username</span>
                 <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: 'white' }}>{createdUser.username}</span>
               </div>
               <div>
-                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Personal Passcode</span>
+                <span style={{ display: 'block', fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase' }}>Your Personal Passcode</span>
                 <span style={{ fontSize: '2.5rem', fontWeight: 'bold', color: 'var(--accent-color)', letterSpacing: '4px' }}>{createdUser.passcode}</span>
               </div>
             </div>
-
-            <div style={{ color: '#f1c40f', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
-              ⚠ Do not lose this passcode! It cannot be recovered.
-            </div>
-
+            <p style={{ color: '#f1c40f', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              ⚠ Save this passcode! You will need both your password and passcode to login next time.
+            </p>
             <button onClick={handleProceedAfterSignup} className="btn-primary">
-              I have saved it, Login
+              I've saved it, Login
             </button>
           </div>
         )}
-
       </div>
     </div>
   );

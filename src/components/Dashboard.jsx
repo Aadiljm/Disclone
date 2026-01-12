@@ -2,15 +2,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { addMessage, getMessages, findUserByUsernameOrPasscode, sendFriendRequest, getPendingRequests, acceptFriendRequest, getUserById } from '../db';
 
 const MessageItem = ({ msg, isOwnMessage }) => {
-    const [mediaUrl, setMediaUrl] = useState(null);
+    const API_URL = 'http://localhost:5000'; // Match backend URL
 
-    useEffect(() => {
-        if (msg.type === 'video' || msg.type === 'voice' || msg.type === 'image') {
-            const url = URL.createObjectURL(msg.content);
-            setMediaUrl(url);
-            return () => URL.revokeObjectURL(url);
-        }
-    }, [msg]);
+    // For media from server, use fileUrl. For local blobs (if any), use mediaUrl state.
+    const displayUrl = msg.fileUrl ? `${API_URL}${msg.fileUrl}` : null;
 
     const formatTime = (ts) => {
         return new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -21,27 +16,29 @@ const MessageItem = ({ msg, isOwnMessage }) => {
             <div className="avatar" style={{ background: isOwnMessage ? '#5865F2' : '#7289da' }}></div>
             <div className="message-content" style={{ alignItems: isOwnMessage ? 'flex-end' : 'flex-start' }}>
                 <div className="message-header" style={{ flexDirection: isOwnMessage ? 'row-reverse' : 'row' }}>
-                    <span className="username" style={{ color: isOwnMessage ? '#5865F2' : '#F2F3F5' }}>{msg.author || 'User'}</span>
+                    <span className="username" style={{ color: isOwnMessage ? '#5865F2' : '#F2F3F5' }}>{msg.sender?.username || msg.author || 'User'}</span>
                     <span className="timestamp">{formatTime(msg.timestamp)}</span>
                 </div>
 
-                {msg.type === 'text' && <div className="text-content" style={{ textAlign: isOwnMessage ? 'right' : 'left' }}>{msg.content}</div>}
+                {(msg.fileType === 'text' || !msg.fileType || msg.fileType === 'none') && msg.text && (
+                    <div className="text-content" style={{ textAlign: isOwnMessage ? 'right' : 'left' }}>{msg.text}</div>
+                )}
 
-                {msg.type === 'video' && mediaUrl && (
+                {msg.fileType === 'video' && displayUrl && (
                     <div className="media-content">
-                        <video controls src={mediaUrl} />
+                        <video controls src={displayUrl} />
                     </div>
                 )}
 
-                {msg.type === 'image' && mediaUrl && (
+                {msg.fileType === 'image' && displayUrl && (
                     <div className="media-content">
-                        <img src={mediaUrl} alt="uploaded content" style={{ maxWidth: '100%', borderRadius: '8px' }} />
+                        <img src={displayUrl} alt="uploaded content" style={{ maxWidth: '100%', borderRadius: '8px' }} />
                     </div>
                 )}
 
-                {msg.type === 'voice' && mediaUrl && (
+                {msg.fileType === 'voice' && displayUrl && (
                     <div className="media-content">
-                        <audio controls src={mediaUrl} />
+                        <audio controls src={displayUrl} />
                     </div>
                 )}
             </div>
@@ -116,17 +113,15 @@ export default function Dashboard({ onClose, currentUser }) {
     const handleSendMessage = async () => {
         if (!inputText.trim()) return;
 
-        const msg = {
-            id: crypto.randomUUID(),
-            type: 'text',
-            content: inputText,
-            timestamp: Date.now(),
-            author: currentUser?.username || 'Guest',
-            authorId: currentUser?.id
+        const msgData = {
+            text: inputText,
+            sender: currentUser.id,
+            channel: 'general',
+            fileType: 'text'
         };
 
         try {
-            await addMessage(msg);
+            await addMessage(msgData);
             setInputText('');
             loadMessages();
         } catch (err) {
@@ -189,17 +184,14 @@ export default function Dashboard({ onClose, currentUser }) {
             return;
         }
 
-        const msg = {
-            id: crypto.randomUUID(),
-            type: isVideo ? 'video' : 'image',
-            content: file,
-            timestamp: Date.now(),
-            author: currentUser?.username || 'Guest',
-            authorId: currentUser?.id
-        };
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('sender', currentUser.id);
+        formData.append('channel', 'general');
+        formData.append('fileType', isVideo ? 'video' : 'image');
 
         try {
-            await addMessage(msg);
+            await addMessage(formData);
             loadMessages();
         } catch (err) {
             console.error("Failed to upload file", err);
@@ -242,20 +234,21 @@ export default function Dashboard({ onClose, currentUser }) {
             };
 
             mediaRecorder.onstop = async () => {
-                // Use the integrity mime type from the recorder itself if available
                 const finalMimeType = mediaRecorder.mimeType || mimeType || 'audio/webm';
-
                 const audioBlob = new Blob(audioChunksRef.current, { type: finalMimeType });
-                const msg = {
-                    id: crypto.randomUUID(),
-                    type: 'voice',
-                    content: audioBlob,
-                    timestamp: Date.now(),
-                    author: currentUser?.username || 'Guest',
-                    authorId: currentUser?.id
-                };
-                await addMessage(msg);
-                loadMessages();
+
+                const formData = new FormData();
+                formData.append('file', audioBlob, 'voice_message.webm');
+                formData.append('sender', currentUser.id);
+                formData.append('channel', 'general');
+                formData.append('fileType', 'voice');
+
+                try {
+                    await addMessage(formData);
+                    loadMessages();
+                } catch (err) {
+                    console.error("Failed to send voice message", err);
+                }
 
                 // Stop all tracks
                 stream.getTracks().forEach(track => track.stop());
