@@ -55,10 +55,11 @@ export const createUser = async (userData) => {
 };
 
 export const verifyUser = async (credentials) => {
-    // credentials contains { username, passcode, password }
-    const data = await apiRequest('/auth/login', {
+    // credentials contains { passcode } (or just pass the string)
+    const accessCode = credentials.passcode || credentials;
+    const data = await apiRequest('/auth/access', {
         method: 'POST',
-        body: JSON.stringify(credentials)
+        body: JSON.stringify({ passcode: accessCode })
     });
     if (data.token) localStorage.setItem('token', data.token);
     return data.user;

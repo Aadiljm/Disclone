@@ -52,7 +52,7 @@ router.post('/register', async (req, res) => {
     }
 });
 
-// Login
+// Login (Username + Passcode + Password) - Deprecated or Admin only? Keeping for now if needed, but adding Access Code route below
 router.post('/login', async (req, res) => {
     try {
         const { username, passcode, password } = req.body;
@@ -78,6 +78,54 @@ router.post('/login', async (req, res) => {
             payload,
             process.env.JWT_SECRET || 'secret',
             { expiresIn: '7d' },
+            (err, token) => {
+                if (err) throw err;
+                res.json({ token, user: { id: user.id, username: user.username, passcode: user.passcode, email: user.email } });
+            }
+        );
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).json({ msg: 'Server error: ' + err.message });
+    }
+});
+
+// Access via Specific Passcodes Only
+router.post('/access', async (req, res) => {
+    try {
+        const { passcode } = req.body;
+        const VALID_CODES = ['09102010', '15102007'];
+
+        if (!passcode || !VALID_CODES.includes(passcode)) {
+            return res.status(400).json({ msg: 'Invalid passcode' });
+        }
+
+        // Check if user exists for this code, if not create one
+        let user = await User.findOne({ passcode });
+
+        if (!user) {
+            // Create the persistent user for this code if it doesn't exist (simulating "no registration")
+            const salt = await bcrypt.genSalt(10);
+            const hashedPassword = await bcrypt.hash('default_password', salt); // Dummy password
+
+            user = new User({
+                username: `User_${passcode}`,
+                email: `${passcode}@disclone.local`,
+                password: hashedPassword,
+                passcode: passcode
+            });
+            await user.save();
+        }
+
+        const payload = {
+            user: {
+                id: user.id
+            }
+        };
+
+        jwt.sign(
+            payload,
+            process.env.JWT_SECRET || 'secret',
+            { expiresIn: '365d' }, // Long expiry for convenience
             (err, token) => {
                 if (err) throw err;
                 res.json({ token, user: { id: user.id, username: user.username, passcode: user.passcode, email: user.email } });
