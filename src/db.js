@@ -1,4 +1,5 @@
-const API_URL = 'http://localhost:5000/api';
+import { API_URL } from './config';
+
 
 // Helper for Fetch
 const apiRequest = async (endpoint, options = {}) => {

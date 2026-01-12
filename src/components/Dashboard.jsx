@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { addMessage, getMessages, findUserByUsernameOrPasscode, sendFriendRequest, getPendingRequests, acceptFriendRequest, getUserById } from '../db';
+import { API_BASE_URL } from '../config';
 
 const MessageItem = ({ msg, isOwnMessage }) => {
-    const API_URL = 'http://localhost:5000'; // Match backend URL
+    const API_URL = API_BASE_URL; // Match backend URL
 
     // For media from server, use fileUrl. For local blobs (if any), use mediaUrl state.
     const displayUrl = msg.fileUrl ? `${API_URL}${msg.fileUrl}` : null;
